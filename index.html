@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Code Studio</title>
+  <style>
+:root { --bg:#1e1e1e; --bg2:#252526; --bg3:#2d2d30; --line:#3c3c3c; --fg:#d4d4d4; --dim:#8b8b8b; --acc:#0e7acc; --sel:#094771; --err:#f48771; --ok:#89d185; }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; overflow: hidden; }
+body { display: flex; flex-direction: column; background: var(--bg); color: var(--fg); font: 13px/1.4 "Segoe UI", system-ui, sans-serif; }
+button { font: inherit; color: var(--fg); background: none; border: 0; cursor: pointer; padding: 3px 8px; border-radius: 4px; }
+button:hover { background: #3a3d41; }
+
+#top { height: 34px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 12px; background: var(--bg3); border-bottom: 1px solid var(--line); }
+#top #title { flex: 1; text-align: center; color: var(--dim); }
+#btnRun { background: #2ea043; color: #fff; font-weight: 600; }
+#btnRun:hover { background: #3fb950; }
+
+#wb { flex: 1; display: flex; min-height: 0; }
+.h { height: 30px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 8px 0 14px; font-size: 11px; letter-spacing: .08em; color: var(--dim); background: var(--bg2); }
+
+#explorer { width: 210px; flex: none; background: var(--bg2); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+#tree { flex: 1; overflow: auto; }
+.file { display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 14px; cursor: pointer; white-space: nowrap; }
+.file:hover { background: #2a2d2e; }
+.file.on { background: var(--sel); color: #fff; }
+.file .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.file .x { opacity: 0; padding: 0 4px; color: var(--dim); }
+.file:hover .x { opacity: 1; }
+.file .x.arm { opacity: 1; color: var(--err); }
+.newfile { padding: 4px 10px; }
+.newfile input { width: 100%; background: var(--bg); color: var(--fg); border: 1px solid var(--acc); padding: 3px 6px; font: inherit; outline: none; }
+
+#center { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+#tabs { height: 35px; flex: none; display: flex; background: var(--bg2); overflow-x: auto; }
+.tab { display: flex; align-items: center; gap: 8px; padding: 0 10px 0 14px; background: var(--bg3); color: var(--dim); border-right: 1px solid var(--line); cursor: pointer; white-space: nowrap; border-top: 1px solid transparent; }
+.tab.on { background: var(--bg); color: var(--fg); border-top-color: var(--acc); }
+.tab .cl { padding: 0 4px; border-radius: 3px; }
+.tab .cl:hover { background: #444; }
+
+#split { flex: 1; display: flex; min-height: 0; }
+#editorBox { flex: 1 1 50%; min-width: 0; position: relative; }
+#monaco { position: absolute; inset: 0; }
+#ta { position: absolute; inset: 0; width: 100%; height: 100%; background: var(--bg); color: var(--fg); border: 0; outline: none; resize: none; padding: 10px 14px; font: 14px/20px Consolas, "Courier New", monospace; tab-size: 2; white-space: pre; overflow: auto; }
+#empty { position: absolute; inset: 0; display: none; place-items: center; background: var(--bg); color: var(--dim); }
+
+#previewBox { flex: 1 1 50%; min-width: 0; display: flex; flex-direction: column; border-left: 1px solid var(--line); }
+#frame { flex: 1; min-height: 0; border: 0; background: #fff; width: 100%; }
+#console { flex: none; height: 120px; display: none; flex-direction: column; border-top: 1px solid var(--line); background: var(--bg); }
+#console.show { display: flex; }
+#clog { flex: 1; overflow: auto; padding: 4px 10px; font: 12px/1.5 Consolas, monospace; }
+#clog div { white-space: pre-wrap; border-bottom: 1px solid var(--bg3); }
+#clog .error { color: var(--err); } #clog .warn { color: #cca700; }
+
+
+.file .add { opacity: 0; padding: 0 4px; color: var(--dim); border-radius: 3px; }
+.file:hover .add { opacity: 1; }
+.file .add:hover { background: #444; color: var(--fg); }
+.file .arr { width: 10px; color: var(--dim); font-size: 10px; }
+.dev { display: inline-flex; margin-right: 6px; }
+.dev button.on { background: var(--sel); color: #fff; }
+#frameArea { flex: 1; min-height: 0; background: #2a2a2a; display: flex; justify-content: center; overflow: auto; }
+#frame { flex: none; width: 100%; height: 100%; border: 0; background: #fff; }
+#frameArea.tablet #frame { width: 768px; max-width: 100%; margin: 12px 0; height: calc(100% - 24px); border-radius: 10px; }
+#frameArea.phone #frame { width: 375px; max-width: 100%; margin: 12px 0; height: calc(100% - 24px); max-height: 740px; border-radius: 22px; border: 8px solid #111; }
+#findbar { display: none; position: absolute; top: 8px; right: 24px; z-index: 30; background: var(--bg2); border: 1px solid var(--line); border-radius: 6px; padding: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.5); width: 330px; }
+#findbar .fr { display: flex; gap: 4px; margin-bottom: 6px; }
+#findbar input[type=text], #findbar .fr input { flex: 1; min-width: 0; background: var(--bg); color: var(--fg); border: 1px solid var(--line); padding: 4px 6px; font: inherit; outline: none; border-radius: 3px; }
+#findbar .fr input:focus { border-color: var(--acc); }
+#findbar button { border: 1px solid var(--line); }
+#findbar .fo { display: flex; gap: 12px; color: var(--dim); font-size: 12px; }
+#findbar .fo input { vertical-align: middle; }
+#fInfo { margin-top: 4px; font-size: 12px; color: var(--ok); min-height: 16px; }
+#status { height: 22px; flex: none; background: #007acc; color: #fff; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; font-size: 12px; }
+#toast { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); background: #333; border: 1px solid var(--line); padding: 6px 14px; border-radius: 6px; opacity: 0; pointer-events: none; transition: .2s; }
+#toast.show { opacity: 1; }
+
+@media (max-width: 900px) { #explorer { display: none; } #previewBox { display: none; } }
+
+</style>
+</head>
+<body>
+  <div id="top">
+    <b>Code Studio</b>
+    <span id="title">index.html</span>
+    <button id="btnRun">▶ Run</button>
+    <button id="btnFind">🔍 Find &amp; Replace</button>
+    <button id="btnDl">⬇ Download .zip</button>
+  </div>
+
+  <div id="wb">
+    <aside id="explorer">
+      <div class="h"><span>EXPLORER</span><span><button id="btnNew" title="New file">＋ File</button><button id="btnNewFolder" title="New folder">＋ Folder</button></span></div>
+      <div id="tree"></div>
+    </aside>
+
+    <main id="center">
+      <div id="tabs"></div>
+      <div id="split">
+        <div id="editorBox">
+          <div id="findbar">
+            <div class="fr"><input id="fInput" placeholder="Find"><button id="fNext">Next</button><button id="fClose" title="Close (Esc)">✕</button></div>
+            <div class="fr"><input id="rInput" placeholder="Replace with"><button id="rOne">Replace</button><button id="rAll">Replace all</button></div>
+            <div class="fo"><label><input type="checkbox" id="fCase"> Match case</label><label><input type="checkbox" id="fAllFiles"> All files</label></div>
+            <div id="fInfo"></div>
+          </div>
+          <div id="monaco"></div>
+          <textarea id="ta" spellcheck="false" style="display:none"></textarea>
+          <div id="empty">Open a file, or ask the AI to build something.</div>
+        </div>
+        <div id="previewBox">
+          <div class="h"><span id="purl">Preview</span><span><span class="dev"><button data-dev="" class="on" title="Desktop">🖥</button><button data-dev="tablet" title="Tablet">▭</button><button data-dev="phone" title="Phone">📱</button></span><button id="btnPop">↗ New tab</button></span></div>
+          <div id="frameArea"><iframe id="frame" sandbox="allow-scripts allow-modals allow-forms allow-popups"></iframe></div>
+          <div id="console"><div class="h"><span>CONSOLE</span><button id="btnClr">Clear</button></div><div id="clog"></div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="status"><span id="stEditor">Loading editor…</span><span id="stSave">Saved</span></div>
+  <div id="toast"></div>
+  <script>
+(() => {
+  "use strict";
+  const $ = (s) => document.querySelector(s);
+  const LS = "codestudio-v2";
+
+  const STARTER = {
+    "index.html": '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>My Website</title>\n</head>\n<body>\n\n</body>\n</html>\n'
+  };
+
+  let S = { files: {}, open: [], active: null, folders: [] };
+
+  function load() {
+    try {
+      const d = JSON.parse(localStorage.getItem(LS) || "null");
+      if (d && d.files && Object.keys(d.files).length) S = Object.assign(S, { files: d.files, open: d.open || [], active: d.active || null, folders: d.folders || [] });
+    } catch (e) {}
+    if (!Object.keys(S.files).length) {
+      S.files = JSON.parse(JSON.stringify(STARTER)); S.open = ["index.html"]; S.active = "index.html";
+    }
+    S.open = S.open.filter((p) => p in S.files);
+    if (!(S.active in S.files)) S.active = S.open[0] || null;
+  }
+  let saveT;
+  function persist(now) {
+    clearTimeout(saveT);
+    const run = () => {
+      try { localStorage.setItem(LS, JSON.stringify({ files: S.files, open: S.open, active: S.active, folders: S.folders })); } catch (e) {}
+      $("#stSave").textContent = "Saved";
+    };
+    if (now) run(); else { $("#stSave").textContent = "Unsaved…"; saveT = setTimeout(run, 600); }
+  }
+  function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 1800); }
+  const langOf = (p) => ({ html: "html", htm: "html", css: "css", js: "javascript", mjs: "javascript", json: "json", md: "markdown", svg: "xml", xml: "xml" }[(p.split(".").pop() || "").toLowerCase()] || "plaintext");
+
+  /* ================= Editor (Monaco, with textarea fallback) ================= */
+  let mon = null, models = {}, suppress = false;
+  const ta = $("#ta");
+
+  function initEditor() {
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = (ok) => { if (!done) { done = true; resolve(ok); } };
+      setTimeout(() => finish(false), 10000);
+      const base = "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min";
+      const s = document.createElement("script");
+      s.src = base + "/vs/loader.js";
+      s.onerror = () => finish(false);
+      s.onload = () => {
+        try {
+          require.config({ paths: { vs: base + "/vs" } });
+          window.MonacoEnvironment = {
+            getWorkerUrl: () => "data:text/javascript;charset=utf-8," + encodeURIComponent(
+              "self.MonacoEnvironment={baseUrl:'" + base + "/'};importScripts('" + base + "/vs/base/worker/workerMain.js');")
+          };
+          require(["vs/editor/editor.main"], () => {
+            mon = monaco.editor.create($("#monaco"), {
+              theme: "vs-dark", automaticLayout: true, fontSize: 14, tabSize: 2,
+              minimap: { enabled: false }, scrollBeyondLastLine: false, wordWrap: "off"
+            });
+            mon.onDidChangeModelContent(() => {
+              if (suppress || !S.active) return;
+              S.files[S.active] = mon.getValue(); onEdit();
+            });
+            mon.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => { persist(true); toast("Saved"); });
+            mon.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, runPreview);
+            mon.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => findOpen());
+            mon.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyH, () => findOpen());
+            finish(true);
+          }, () => finish(false));
+        } catch (e) { finish(false); }
+      };
+      document.head.appendChild(s);
+    });
+  }
+
+  function showFile() {
+    const p = S.active;
+    $("#empty").style.display = p ? "none" : "grid";
+    $("#title").textContent = p || "Code Studio";
+    if (mon) {
+      $("#monaco").style.display = p ? "block" : "none";
+      if (!p) return;
+      let m = models[p];
+      if (!m) { m = models[p] = monaco.editor.createModel(S.files[p], langOf(p)); }
+      if (m.getValue() !== S.files[p]) { suppress = true; m.setValue(S.files[p]); suppress = false; }
+      mon.setModel(m);
+    } else {
+      ta.style.display = p ? "block" : "none";
+      if (p) ta.value = S.files[p];
+    }
+  }
+  function syncModels() {
+    if (!mon) return;
+    Object.keys(models).forEach((p) => { if (!(p in S.files)) { models[p].dispose(); delete models[p]; } });
+    Object.keys(S.files).forEach((p) => {
+      if (models[p] && models[p].getValue() !== S.files[p]) { suppress = true; models[p].setValue(S.files[p]); suppress = false; }
+    });
+  }
+  ta.addEventListener("input", () => { if (S.active) { S.files[S.active] = ta.value; onEdit(); } });
+  ta.addEventListener("keydown", (e) => {
+    if (e.key === "Tab") { e.preventDefault(); const a = ta.selectionStart; ta.setRangeText("  ", a, ta.selectionEnd, "end"); ta.dispatchEvent(new Event("input")); }
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runPreview(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); persist(true); toast("Saved"); }
+  });
+  document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); persist(true); toast("Saved"); } });
+
+  function onEdit() { persist(false); schedulePreview(); }
+
+  /* ================= Tabs & explorer ================= */
+  function renderTabs() {
+    const t = $("#tabs"); t.innerHTML = "";
+    S.open.forEach((p) => {
+      const d = document.createElement("div"); d.className = "tab" + (p === S.active ? " on" : "");
+      d.innerHTML = '<span class="nm"></span><span class="cl">×</span>';
+      d.querySelector(".nm").textContent = p;
+      d.addEventListener("click", (e) => { if (e.target.classList.contains("cl")) closeTab(p); else openFile(p); });
+      t.appendChild(d);
+    });
+  }
+  const collapsed = new Set();
+  const dirOf = (p) => { const i = p.lastIndexOf("/"); return i < 0 ? "" : p.slice(0, i); };
+  const baseOf = (p) => p.slice(p.lastIndexOf("/") + 1);
+  function allFolders() {
+    const set = new Set(S.folders || []);
+    Object.keys(S.files).forEach((p) => { const parts = p.split("/"); for (let i = 1; i < parts.length; i++) set.add(parts.slice(0, i).join("/")); });
+    return set;
+  }
+  function armDelete(x, fn) {
+    x.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (x.classList.contains("arm")) fn();
+      else { x.classList.add("arm"); x.textContent = "Delete?"; setTimeout(() => { x.classList.remove("arm"); x.textContent = "🗑"; }, 2500); }
+    });
+  }
+  function renderTree() {
+    const t = $("#tree"); t.innerHTML = "";
+    const folders = allFolders();
+    (function level(parent, depth) {
+      [...folders].filter((f) => dirOf(f) === parent).sort().forEach((f) => {
+        const d = document.createElement("div"); d.className = "file dir"; d.style.paddingLeft = (10 + depth * 14) + "px";
+        d.innerHTML = '<span class="arr"></span><span class="nm"></span><span class="add" title="New file in this folder">＋</span><span class="x" title="Delete folder">🗑</span>';
+        d.querySelector(".arr").textContent = collapsed.has(f) ? "▸" : "▾";
+        d.querySelector(".nm").textContent = "📁 " + baseOf(f);
+        d.addEventListener("click", () => { if (collapsed.has(f)) collapsed.delete(f); else collapsed.add(f); renderTree(); });
+        d.querySelector(".add").addEventListener("click", (e) => { e.stopPropagation(); collapsed.delete(f); renderTree(); inlineInput("filename.ext", f + "/", addFile); });
+        armDelete(d.querySelector(".x"), () => deleteFolder(f));
+        t.appendChild(d);
+        if (!collapsed.has(f)) level(f, depth + 1);
+      });
+      Object.keys(S.files).filter((p) => dirOf(p) === parent).sort().forEach((p) => {
+        const d = document.createElement("div"); d.className = "file" + (p === S.active ? " on" : ""); d.style.paddingLeft = (24 + depth * 14) + "px";
+        d.innerHTML = '<span class="nm"></span><span class="x" title="Delete">🗑</span>';
+        d.querySelector(".nm").textContent = baseOf(p);
+        armDelete(d.querySelector(".x"), () => deleteFile(p));
+        d.addEventListener("click", () => openFile(p));
+        t.appendChild(d);
+      });
+    })("", 0);
+  }
+  function refreshAll() { renderTabs(); renderTree(); syncModels(); showFile(); }
+  function openFile(p) { if (!(p in S.files)) return; if (!S.open.includes(p)) S.open.push(p); S.active = p; refreshAll(); persist(false); }
+  function closeTab(p) {
+    const i = S.open.indexOf(p); if (i < 0) return; S.open.splice(i, 1);
+    if (S.active === p) S.active = S.open[Math.min(i, S.open.length - 1)] || null;
+    refreshAll(); persist(false);
+  }
+  function deleteFile(p) {
+    delete S.files[p]; const i = S.open.indexOf(p); if (i >= 0) S.open.splice(i, 1);
+    if (S.active === p) S.active = S.open[0] || null;
+    refreshAll(); persist(false); schedulePreview();
+  }
+  const cleanPath = (p) => (p || "").trim().replace(/\\/g, "/").replace(/[^\w.\-\/ ]/g, "").replace(/\.\.+/g, ".").replace(/\/+/g, "/").replace(/^\/+/, "");
+  function inlineInput(placeholder, prefill, cb) {
+    const old = document.querySelector(".newfile"); if (old) old.remove();
+    const w = document.createElement("div"); w.className = "newfile"; w.innerHTML = '<input>';
+    const inp = w.querySelector("input"); inp.placeholder = placeholder; inp.value = prefill || "";
+    const tree = $("#tree"); tree.insertBefore(w, tree.firstChild); inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
+    let finished = false;
+    const done = (ok) => { if (finished) return; finished = true; const v = inp.value; if (w.parentNode) w.remove(); if (ok) cb(v); };
+    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") done(true); if (e.key === "Escape") done(false); });
+    inp.addEventListener("blur", () => done(!!inp.value.trim()));
+  }
+  function addFile(v) {
+    let name = cleanPath(v); if (!name || name.endsWith("/")) return;
+    if (!/\.[a-z0-9]+$/i.test(baseOf(name))) name += ".html";
+    if (!(name in S.files)) S.files[name] = "";
+    openFile(name); schedulePreview();
+  }
+  function addFolder(v) {
+    const name = cleanPath(v).replace(/\/+$/, ""); if (!name) return;
+    if (!S.folders.includes(name)) S.folders.push(name);
+    renderTree(); persist(false);
+  }
+  function deleteFolder(f) {
+    Object.keys(S.files).forEach((p) => { if (p.startsWith(f + "/")) { delete S.files[p]; const i = S.open.indexOf(p); if (i >= 0) S.open.splice(i, 1); } });
+    S.folders = S.folders.filter((x) => x !== f && !x.startsWith(f + "/"));
+    if (!(S.active in S.files)) S.active = S.open[0] || null;
+    refreshAll(); persist(false); schedulePreview();
+  }
+  $("#btnNew").addEventListener("click", () => inlineInput("filename.ext  (or folder/filename.ext)", "", addFile));
+  $("#btnNewFolder").addEventListener("click", () => inlineInput("folder name", "", addFolder));
+
+  /* ================= Preview ================= */
+  const HOOK = "<script>(function(){function s(t,a){try{parent.postMessage({__ide:1,t:t,m:Array.prototype.map.call(a,function(x){try{return typeof x==='object'?JSON.stringify(x):String(x)}catch(e){return String(x)}}).join(' ')},'*')}catch(e){}}['log','info','warn','error'].forEach(function(k){var o=console[k];console[k]=function(){s(k,arguments);o.apply(console,arguments)}});window.addEventListener('error',function(e){s('error',[e.message+' ('+(e.filename||'').split('/').pop()+':'+e.lineno+')'])});window.addEventListener('unhandledrejection',function(e){s('error',['Unhandled: '+(e.reason&&e.reason.message||e.reason)])});})();<\/script>";
+  function resolve(base, ref) {
+    ref = ref.split("#")[0].split("?")[0];
+    if (/^(https?:|data:|\/\/)/i.test(ref)) return null;
+    const dir = base.includes("/") ? base.slice(0, base.lastIndexOf("/")) : "";
+    const parts = ref.startsWith("/") ? [] : (dir ? dir.split("/") : []);
+    ref.split("/").forEach((seg) => { if (seg === "" || seg === ".") return; if (seg === "..") parts.pop(); else parts.push(seg); });
+    const p = parts.join("/");
+    return p in S.files ? p : null;
+  }
+  function buildDoc() {
+    let entry = "index.html" in S.files ? "index.html" : Object.keys(S.files).find((p) => langOf(p) === "html");
+    if (!entry) return { url: "—", html: '<body style="font-family:system-ui;color:#888;display:grid;place-items:center;height:100vh;margin:0">No HTML file to preview</body>' };
+    let h = S.files[entry];
+    h = h.replace(/<link\b[^>]*>/gi, (m) => {
+      if (!/stylesheet/i.test(m)) return m;
+      const r = /href\s*=\s*["']([^"']+)["']/i.exec(m); const p = r && resolve(entry, r[1]);
+      return p ? "<style>\n" + S.files[p].replace(/<\/style/gi, "<\\/style") + "\n</style>" : m;
+    });
+    h = h.replace(/<script\b([^>]*?)\bsrc\s*=\s*["']([^"']+)["']([^>]*)>\s*<\/script>/gi, (m, a, src, b) => {
+      const p = resolve(entry, src);
+      return p ? "<script" + a + b + ">\n" + S.files[p].replace(/<\/script/gi, "<\\/script") + "\n<\/script>" : m;
+    });
+    h = /<head[^>]*>/i.test(h) ? h.replace(/<head[^>]*>/i, (m) => m + HOOK) : /<html[^>]*>/i.test(h) ? h.replace(/<html[^>]*>/i, (m) => m + HOOK) : HOOK + h;
+    return { url: entry, html: h };
+  }
+  let prevT;
+  function schedulePreview() { clearTimeout(prevT); prevT = setTimeout(runPreview, 600); }
+  function runPreview() {
+    clearTimeout(prevT);
+    const d = buildDoc(); $("#purl").textContent = "Preview — " + d.url;
+    $("#frame").srcdoc = d.html;
+  }
+  window.addEventListener("message", (e) => {
+    if (e.source !== $("#frame").contentWindow || !e.data || !e.data.__ide) return;
+    const d = document.createElement("div"); d.className = e.data.t; d.textContent = e.data.m;
+    const c = $("#clog"); c.appendChild(d); c.scrollTop = c.scrollHeight;
+    if (e.data.t === "error") $("#console").classList.add("show");
+  });
+  $("#btnRun").addEventListener("click", () => { $("#clog").innerHTML = ""; runPreview(); toast("Preview refreshed"); });
+  $("#btnClr").addEventListener("click", () => { $("#clog").innerHTML = ""; $("#console").classList.remove("show"); });
+  $("#btnPop").addEventListener("click", () => {
+    const w = window.open("about:blank", "_blank"); if (!w) return;
+    w.document.open(); w.document.write(buildDoc().html); w.document.close();
+  });
+  /* ---------- Phone / tablet preview ---------- */
+  document.querySelectorAll(".dev button").forEach((b) => b.addEventListener("click", () => {
+    $("#frameArea").className = b.dataset.dev;
+    document.querySelectorAll(".dev button").forEach((x) => x.classList.toggle("on", x === b));
+  }));
+
+  /* ---------- Download project as .zip (no libraries needed) ---------- */
+  const crcTable = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(buf) { let crc = 0xFFFFFFFF; for (let i = 0; i < buf.length; i++) crc = crcTable[(crc ^ buf[i]) & 0xFF] ^ (crc >>> 8); return (crc ^ 0xFFFFFFFF) >>> 0; }
+  function makeZip(entries) {
+    const enc = new TextEncoder(), parts = [], central = []; let offset = 0;
+    const now = new Date();
+    const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+    const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    entries.forEach((e) => {
+      const name = enc.encode(e.name), crc = crc32(e.data), size = e.data.length;
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+      lh.setUint16(10, dosTime, true); lh.setUint16(12, dosDate, true); lh.setUint32(14, crc, true);
+      lh.setUint32(18, size, true); lh.setUint32(22, size, true); lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+      parts.push(new Uint8Array(lh.buffer), name, e.data);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+      ch.setUint16(12, dosTime, true); ch.setUint16(14, dosDate, true); ch.setUint32(16, crc, true);
+      ch.setUint32(20, size, true); ch.setUint32(24, size, true); ch.setUint16(28, name.length, true);
+      ch.setUint32(42, offset, true);
+      central.push(new Uint8Array(ch.buffer), name);
+      offset += 30 + name.length + size;
+    });
+    let cd = 0; central.forEach((p) => (cd += p.length));
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true);
+    end.setUint32(12, cd, true); end.setUint32(16, offset, true);
+    return new Blob(parts.concat(central, [new Uint8Array(end.buffer)]), { type: "application/zip" });
+  }
+  $("#btnDl").addEventListener("click", () => {
+    const enc = new TextEncoder();
+    const entries = Object.keys(S.files).map((p) => ({ name: p, data: enc.encode(S.files[p]) }));
+    if (!entries.length) return toast("Nothing to download yet");
+    const a = document.createElement("a"); a.href = URL.createObjectURL(makeZip(entries)); a.download = "my-website.zip";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast("Downloaded my-website.zip");
+  });
+
+  /* ---------- Find & replace ---------- */
+  const fb = $("#findbar");
+  function selectedText() {
+    if (!S.active) return "";
+    if (mon) return mon.getModel().getValueInRange(mon.getSelection());
+    return ta.value.slice(ta.selectionStart, ta.selectionEnd);
+  }
+  function findOpen() {
+    fb.style.display = "block";
+    const s = selectedText(); if (s && !s.includes("\n")) $("#fInput").value = s;
+    $("#fInput").focus(); $("#fInput").select();
+  }
+  function findClose() { fb.style.display = "none"; $("#fInfo").textContent = ""; if (mon) mon.focus(); else ta.focus(); }
+  const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  function findNext() {
+    const term = $("#fInput").value, cs = $("#fCase").checked; if (!term || !S.active) return false;
+    let ok = false;
+    if (mon) {
+      const m = mon.getModel().findNextMatch(term, mon.getSelection().getEndPosition(), false, cs, null, false);
+      if (m) { mon.setSelection(m.range); mon.revealRangeInCenter(m.range); ok = true; }
+    } else {
+      const text = cs ? ta.value : ta.value.toLowerCase(), t = cs ? term : term.toLowerCase();
+      let i = text.indexOf(t, ta.selectionEnd); if (i < 0) i = text.indexOf(t);
+      if (i >= 0) { ta.focus(); ta.setSelectionRange(i, i + term.length); $("#fInput").focus(); ok = true; }
+    }
+    $("#fInfo").textContent = ok ? "" : "No results"; $("#fInfo").style.color = ok ? "" : "var(--err)";
+    return ok;
+  }
+  function replaceOne() {
+    const term = $("#fInput").value, rep = $("#rInput").value, cs = $("#fCase").checked; if (!term || !S.active) return;
+    const sel = selectedText();
+    if (sel && (cs ? sel === term : sel.toLowerCase() === term.toLowerCase())) {
+      if (mon) mon.executeEdits("find", [{ range: mon.getSelection(), text: rep }]);
+      else { ta.setRangeText(rep, ta.selectionStart, ta.selectionEnd, "end"); ta.dispatchEvent(new Event("input")); }
+    }
+    findNext();
+  }
+  function replaceAll() {
+    const term = $("#fInput").value, rep = $("#rInput").value, cs = $("#fCase").checked; if (!term || !S.active) return;
+    const re = new RegExp(escRe(term), cs ? "g" : "gi"); let total = 0, nfiles = 0;
+    const targets = $("#fAllFiles").checked ? Object.keys(S.files) : [S.active];
+    targets.forEach((p) => {
+      const cur = S.files[p], n = (cur.match(re) || []).length;
+      if (n) { S.files[p] = cur.replace(re, () => rep); total += n; nfiles++; }
+    });
+    if (total) { refreshAll(); persist(false); schedulePreview(); }
+    $("#fInfo").style.color = total ? "var(--ok)" : "var(--err)";
+    $("#fInfo").textContent = total ? "Replaced " + total + " in " + nfiles + " file" + (nfiles > 1 ? "s" : "") : "No results";
+  }
+  $("#btnFind").addEventListener("click", findOpen);
+  $("#fNext").addEventListener("click", findNext);
+  $("#rOne").addEventListener("click", replaceOne);
+  $("#rAll").addEventListener("click", replaceAll);
+  $("#fClose").addEventListener("click", findClose);
+  $("#fInput").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); findNext(); } if (e.key === "Escape") findClose(); });
+  $("#rInput").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); replaceOne(); } if (e.key === "Escape") findClose(); });
+  document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && (e.key === "f" || e.key === "h")) { e.preventDefault(); findOpen(); } });
+
+  /* ================= Boot ================= */
+  load(); renderTabs(); renderTree(); runPreview();
+  initEditor().then((ok) => {
+    if (!ok) { $("#monaco").style.display = "none"; $("#stEditor").textContent = "Simple editor (Monaco couldn't load — check internet)"; }
+    else $("#stEditor").textContent = "Monaco editor ready";
+    showFile();
+  });
+})();
+
+</script>
+</body>
+</html>
